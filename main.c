@@ -33,9 +33,9 @@ unsigned long GerarHash(const char *str)
 void LimparConsole()
 {
 #ifdef _WIN32
-            system("cls");
+    system("cls");
 #else
-            system("clear");
+    system("clear");
 #endif
 }
 
@@ -54,7 +54,6 @@ void CriarNovoUsuario()
     LimparConsole();
 
     printf("Usuário e senha criados com sucesso!\n\n");
-
 }
 
 // Função para salvar o nome de usuário e senha no arquivo
@@ -73,7 +72,6 @@ void SalvarCredenciais(const char *usuario, const char *senha)
     fprintf(file, "%lu %lu\n", hashUsuario, hashSenha); // Grava os hashes no arquivo
     fclose(file);
 }
-
 
 // Função para carregar os hashes do arquivo
 void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
@@ -94,8 +92,6 @@ void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
 
     fclose(file);
 }
-
-
 
 // Função de login
 void Login()
@@ -142,7 +138,7 @@ void ExibirMenuPrincipal()
 {
     int opcao;
 
-    while(opcao != 4)
+    while (opcao != 4)
     {
         printf("Menu Principal: \n\n");
         printf("1 - Cadastro de Clientes: \n");
@@ -152,7 +148,7 @@ void ExibirMenuPrincipal()
 
         scanf("%d", &opcao);
 
-        switch(opcao)
+        switch (opcao)
         {
 
         case 1:
@@ -180,7 +176,6 @@ void ExibirMenuPrincipal()
             break;
         }
     }
-
 }
 
 // Função principal
