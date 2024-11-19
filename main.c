@@ -1,28 +1,71 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <locale.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #define CREDENCIAIS_ARQUIVO "credenciais.txt"
 
+void DefinirIdioma()
+{
+    setlocale(LC_ALL, "pt_BR.UTF-8");
+
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+}
 // Função de hash simples baseada no algoritmo DJBX33A
-unsigned long gerarHash(const char *str) {
+unsigned long GerarHash(const char *str)
+{
     unsigned long hash = 5381; // Valor inicial arbitrário
     int c;
 
-    while ((c = *str++)) {
+    while ((c = *str++))
+    {
         hash = ((hash << 5) + hash) + c; // hash * 33 + c
     }
 
     return hash;
 }
 
+void LimparConsole()
+{
+#ifdef _WIN32
+            system("cls");
+#else
+            system("clear");
+#endif
+}
+
+void CriarNovoUsuario()
+{
+    char usuarioInicial[50], senhaInicial[50];
+
+    printf("Nenhum usuário encontrado. \nCrie um nome de usuário inicial: ");
+    scanf("%s", usuarioInicial);
+
+    printf("Crie uma senha inicial: ");
+    scanf("%s", senhaInicial);
+
+    salvarCredenciais(usuarioInicial, senhaInicial);
+
+    LimparConsole();
+
+    printf("Usuário e senha criados com sucesso!\n\n");
+
+}
+
 // Função para salvar o nome de usuário e senha no arquivo
-void salvarCredenciais(const char *usuario, const char *senha) {
+void SalvarCredenciais(const char *usuario, const char *senha)
+{
     unsigned long hashUsuario = gerarHash(usuario);
     unsigned long hashSenha = gerarHash(senha);
 
     FILE *file = fopen(CREDENCIAIS_ARQUIVO, "w");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         printf("Erro: Não foi possível abrir o arquivo para escrita.\n");
         exit(1);
     }
@@ -31,15 +74,19 @@ void salvarCredenciais(const char *usuario, const char *senha) {
     fclose(file);
 }
 
+
 // Função para carregar os hashes do arquivo
-void carregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha) {
+void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
+{
     FILE *file = fopen(CREDENCIAIS_ARQUIVO, "r");
-    if (file == NULL) {
+    if (file == NULL)
+    {
         printf("Erro: Não foi possível abrir o arquivo de credenciais.\n");
         exit(1);
     }
 
-    if (fscanf(file, "%lu %lu", hashUsuario, hashSenha) != 2) {
+    if (fscanf(file, "%lu %lu", hashUsuario, hashSenha) != 2)
+    {
         printf("Erro: O arquivo de credenciais está vazio ou mal formatado.\n");
         fclose(file);
         exit(1);
@@ -48,8 +95,11 @@ void carregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha) {
     fclose(file);
 }
 
+
+
 // Função de login
-void login() {
+void Login()
+{
     unsigned long hashUsuarioArmazenado, hashSenhaArmazenado;
     carregarCredenciais(&hashUsuarioArmazenado, &hashSenhaArmazenado);
 
@@ -60,7 +110,8 @@ void login() {
     printf("||  Sistema de Login  ||\n");
     printf("========================\n");
 
-    while (1) {
+    while (1)
+    {
         printf("Digite o nome de usuário: ");
         scanf("%s", inputUsuario);
 
@@ -68,44 +119,96 @@ void login() {
         scanf("%s", inputSenha);
 
         // Calcula os hashes do usuário e senha digitados
-        inputHashUsuario = gerarHash(inputUsuario);
-        inputHashSenha = gerarHash(inputSenha);
+        inputHashUsuario = GerarHash(inputUsuario);
+        inputHashSenha = GerarHash(inputSenha);
 
-        if (inputHashUsuario == hashUsuarioArmazenado && inputHashSenha == hashSenhaArmazenado) {
-#ifdef _WIN32
-            system("cls");
-#else
-            system("clear");
-#endif
+        if (inputHashUsuario == hashUsuarioArmazenado && inputHashSenha == hashSenhaArmazenado)
+        {
+
             printf("\nLogin realizado com sucesso!\n\n");
+
+            LimparConsole();
+
             break;
-        } else {
+        }
+        else
+        {
             printf("\nNome de usuário ou senha incorretos. Tente novamente.\n\n");
         }
     }
 }
 
+void ExibirMenuPrincipal()
+{
+    int opcao;
+
+    while(opcao != 4)
+    {
+        printf("Menu Principal: \n\n");
+        printf("1 - Cadastro de Clientes: \n");
+        printf("2 - Gerenciamento de Resíduos: \n");
+        printf("3 - Criar Relatórios \n");
+        printf("4 - Sair do programa: \n");
+
+        scanf("%d", &opcao);
+
+        switch(opcao)
+        {
+
+        case 1:
+
+            printf("Opção 1 digitada!\n");
+
+            break;
+
+        case 2:
+
+            printf("Opção 2 digitada!\n");
+
+            break;
+
+        case 3:
+
+            printf("Opção 3 digitada!\n");
+
+            break;
+
+        default:
+
+            printf("Opção inválida!\n");
+
+            break;
+        }
+    }
+
+}
+
 // Função principal
-int main() {
-    // Verifica se o arquivo de credenciais já existe
+int main()
+{
+    DefinirIdioma();
+
     FILE *file = fopen(CREDENCIAIS_ARQUIVO, "r");
-    if (file == NULL) {
-        // Caso não exista, cria um usuário inicial
-        char usuarioInicial[50], senhaInicial[50];
-        printf("Nenhum usuário encontrado. \nCrie um nome de usuário inicial: ");
-        scanf("%s", usuarioInicial);
-        printf("Crie uma senha inicial: ");
-        scanf("%s", senhaInicial);
-        salvarCredenciais(usuarioInicial, senhaInicial);
-        printf("Usuário e senha criados com sucesso!\n\n");
-    } else {
+
+    // Verifica se o arquivo de credenciais já existe
+    if (file == NULL)
+    {
+        CriarNovoUsuario();
+    }
+    else
+    {
         fclose(file);
     }
 
     // Inicia o processo de login
-    login();
+    Login();
 
     // Continuação do programa
-    printf("Bem-vindo ao sistema!\n");
+    printf("Bem-vindo ao sistema!\n\n");
+
+    ExibirMenuPrincipal();
+
+    printf("Obrigado por utilizar o sistema!\n");
+
     return 0;
 }
