@@ -7,6 +7,17 @@
 #endif
 
 #define CREDENCIAIS_ARQUIVO "credenciais.txt"
+#define EMPRESAS_ARQUIVO "empresas.txt"
+#define RESIDUOS_ARQUIVO "residuos.txt"
+
+typedef struct
+{
+    int id;
+    int quantidadeResiduos;
+    int mes;
+    float valorEstimado;
+
+} Residuo;
 
 void DefinirIdioma()
 {
@@ -19,12 +30,12 @@ void DefinirIdioma()
 // Função de hash simples baseada no algoritmo DJBX33A
 unsigned long GerarHash(const char *str)
 {
-    unsigned long hash = 5381; // Valor inicial arbitrário
+    unsigned long hash = 5381;
     int c;
 
     while ((c = *str++))
     {
-        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+        hash = ((hash << 5) + hash) + c;
     }
 
     return hash;
@@ -37,6 +48,22 @@ void LimparConsole()
 #else
     system("clear");
 #endif
+}
+
+void SalvarCredenciais(const char *usuario, const char *senha)
+{
+    unsigned long hashUsuario = GerarHash(usuario);
+    unsigned long hashSenha = GerarHash(senha);
+
+    FILE *file = fopen(CREDENCIAIS_ARQUIVO, "w");
+    if (file == NULL)
+    {
+        printf("Erro: Não foi possível abrir o arquivo para escrita.\n");
+        exit(1);
+    }
+
+    fprintf(file, "%lu %lu\n", hashUsuario, hashSenha);
+    fclose(file);
 }
 
 void CriarNovoUsuario()
@@ -56,24 +83,6 @@ void CriarNovoUsuario()
     printf("Usuário e senha criados com sucesso!\n\n");
 }
 
-// Função para salvar o nome de usuário e senha no arquivo
-void SalvarCredenciais(const char *usuario, const char *senha)
-{
-    unsigned long hashUsuario = GerarHash(usuario);
-    unsigned long hashSenha = GerarHash(senha);
-
-    FILE *file = fopen(CREDENCIAIS_ARQUIVO, "w");
-    if (file == NULL)
-    {
-        printf("Erro: Não foi possível abrir o arquivo para escrita.\n");
-        exit(1);
-    }
-
-    fprintf(file, "%lu %lu\n", hashUsuario, hashSenha); // Grava os hashes no arquivo
-    fclose(file);
-}
-
-// Função para carregar os hashes do arquivo
 void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
 {
     FILE *file = fopen(CREDENCIAIS_ARQUIVO, "r");
@@ -93,7 +102,6 @@ void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
     fclose(file);
 }
 
-// Função de login
 void Login()
 {
     unsigned long hashUsuarioArmazenado, hashSenhaArmazenado;
@@ -115,7 +123,6 @@ void Login()
         printf("Digite a senha: ");
         scanf("%s", inputSenha);
 
-        // Calcula os hashes do usuário e senha digitados
         inputHashUsuario = GerarHash(inputUsuario);
         inputHashSenha = GerarHash(inputSenha);
 
@@ -135,6 +142,155 @@ void Login()
     }
 }
 
+void CadastrarResiduo()
+{
+    Residuo novoResiduo;
+
+    printf("Empresas:\n");
+    printf("1 - Empresa1\n");
+    printf("2 - Empresa2\n");
+
+    printf("Digite o código da empresa selecionada:");
+    scanf("%d", &novoResiduo.id);
+
+    printf("Digite o número do mês correspondente: ");
+    scanf("%d", &novoResiduo.mes);
+
+    if(novoResiduo.mes <1 || novoResiduo.mes >12)
+    {
+        printf("Mês inválido!\n");
+        return;
+    }
+
+    printf("Digite a quantidade de resíduos ambientais tratados: ");
+    scanf("%d", &novoResiduo.quantidadeResiduos);
+
+    if(novoResiduo.quantidadeResiduos <0)
+    {
+        printf("Quantidade de resíduos inválida!\n");
+        return;
+    }
+
+    printf("Digite o valor estimado de custo: ");
+    scanf("%f", &novoResiduo.valorEstimado);
+
+    if(novoResiduo.valorEstimado <0.01)
+    {
+        printf("Valor estimado de custo inválido!\n");
+        return;
+    }
+
+    FILE *file = fopen(RESIDUOS_ARQUIVO, "a");
+
+    if (file == NULL)
+    {
+        printf("Erro: Não foi possível abrir o arquivo para de resíduos para escrita.\n");
+    }
+    else
+    {
+        fprintf(file, "%d|%d|%d|%f\n", novoResiduo.id, novoResiduo.mes, novoResiduo.quantidadeResiduos, novoResiduo.valorEstimado);
+        printf("Cadastro realizado com sucesso.\n\n");
+    }
+
+    fclose(file);
+}
+
+Residuo* CarregarResiduos(int* tamanho)
+{
+
+    FILE* file = fopen(RESIDUOS_ARQUIVO, "r");
+    if (!file)
+    {
+        perror("Erro ao abrir o arquivo");
+        return NULL;
+    }
+
+    Residuo* lista = NULL;
+
+    char linha[256];
+    int count = 0;
+
+    while (fgets(linha, sizeof(linha), file))
+    {
+        Residuo novoResiduo;
+
+        if (sscanf(linha, "%d|%d|%d|%f", &novoResiduo.id, &novoResiduo.mes, &novoResiduo.quantidadeResiduos, &novoResiduo.valorEstimado) == 4)
+        {
+            Residuo* novaLista = realloc(lista, (count + 1) * sizeof(Residuo));
+
+            if (!novaLista)
+            {
+                printf("Erro ao carregar memória!\n");
+                free(lista);
+                fclose(file);
+                return NULL;
+            }
+
+            lista = novaLista;
+            lista[count++] = novoResiduo;
+        }
+    }
+
+    fclose(file);
+
+    *tamanho = count;
+
+    return lista;
+}
+
+void GerenciarResiduos()
+{
+    int opcao;
+    int tamanho;
+    int i;
+    Residuo* lista;
+
+    while (opcao != 3)
+    {
+        printf("Gerenciar Resíduos: \n\n");
+        printf("Menu Principal: \n\n");
+        printf("1 - Cadastro: \n");
+        printf("2 - Listar: \n");
+        printf("3 - Voltar: \n");
+
+        scanf("%d", &opcao);
+
+        switch (opcao)
+        {
+
+        case 1:
+
+            CadastrarResiduo();
+
+            break;
+
+        case 2:
+
+            lista = CarregarResiduos(&tamanho);
+
+            for(i = 0; i < tamanho; i++)
+            {
+                printf( "Empresa ID: %d, Mês: %d, Qtd. Resíduos: %d, Valor Estimado: %.2f\n", lista[i].id, lista[i].mes, lista[i].quantidadeResiduos, lista[i].valorEstimado);
+            }
+
+            break;
+
+        default:
+
+            if (opcao != 3)
+            {
+                printf("Opção inválida!\n");
+            }
+            else
+            {
+                LimparConsole();
+            }
+
+            break;
+        }
+    }
+}
+
 void ExibirMenuPrincipal()
 {
     int opcao;
@@ -142,12 +298,14 @@ void ExibirMenuPrincipal()
     while (opcao != 4)
     {
         printf("Menu Principal: \n\n");
-        printf("1 - Cadastro de Clientes: \n");
-        printf("2 - Gerenciamento de Resíduos: \n");
-        printf("3 - Criar Relatórios \n");
-        printf("4 - Sair do programa: \n");
+        printf("1 - Cadastro de Clientes\n");
+        printf("2 - Gerenciamento de Resíduos\n");
+        printf("3 - Criar Relatórios\n");
+        printf("4 - Sair do programa\n");
 
         scanf("%d", &opcao);
+
+        LimparConsole();
 
         switch (opcao)
         {
@@ -160,7 +318,7 @@ void ExibirMenuPrincipal()
 
         case 2:
 
-            printf("Opção 2 digitada!\n");
+            GerenciarResiduos();
 
             break;
 
@@ -172,7 +330,10 @@ void ExibirMenuPrincipal()
 
         default:
 
-            printf("Opção inválida!\n");
+            if (opcao != 4)
+            {
+                printf("Opção inválida!\n");
+            }
 
             break;
         }
@@ -203,6 +364,8 @@ int main()
     printf("Bem-vindo ao sistema!\n\n");
 
     ExibirMenuPrincipal();
+
+    LimparConsole();
 
     printf("Obrigado por utilizar o sistema!\n");
 
