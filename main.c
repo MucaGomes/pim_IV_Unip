@@ -49,7 +49,7 @@ void CriarNovoUsuario()
     printf("Crie uma senha inicial: ");
     scanf("%s", senhaInicial);
 
-    salvarCredenciais(usuarioInicial, senhaInicial);
+    SalvarCredenciais(usuarioInicial, senhaInicial);
 
     LimparConsole();
 
@@ -59,8 +59,8 @@ void CriarNovoUsuario()
 // Função para salvar o nome de usuário e senha no arquivo
 void SalvarCredenciais(const char *usuario, const char *senha)
 {
-    unsigned long hashUsuario = gerarHash(usuario);
-    unsigned long hashSenha = gerarHash(senha);
+    unsigned long hashUsuario = GerarHash(usuario);
+    unsigned long hashSenha = GerarHash(senha);
 
     FILE *file = fopen(CREDENCIAIS_ARQUIVO, "w");
     if (file == NULL)
@@ -97,7 +97,8 @@ void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
 void Login()
 {
     unsigned long hashUsuarioArmazenado, hashSenhaArmazenado;
-    carregarCredenciais(&hashUsuarioArmazenado, &hashSenhaArmazenado);
+
+    CarregarCredenciais(&hashUsuarioArmazenado, &hashSenhaArmazenado);
 
     char inputUsuario[50], inputSenha[50];
     unsigned long inputHashUsuario, inputHashSenha;
