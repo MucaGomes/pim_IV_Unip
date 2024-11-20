@@ -2,110 +2,165 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define CREDENCIAIS_ARQUIVO "credenciais.txt"
+#define RELATORIO_INDIVIDUAL "relatorio_individualizado.txt"
+#define RELATORIO_GLOBAL "relatorio_global.csv"
 
-// Função de hash simples baseada no algoritmo DJBX33A
-unsigned long gerarHash(const char *str) {
-    unsigned long hash = 5381; // Valor inicial arbitrário
-    int c;
-
-    while ((c = *str++)) {
-        hash = ((hash << 5) + hash) + c; // hash * 33 + c
-    }
-
-    return hash;
+// Função para capturar entrada do usuário como string
+void capturarEntrada(const char *mensagem, char *buffer, size_t tamanho) {
+    printf("%s", mensagem);
+    fgets(buffer, tamanho, stdin);
+    buffer[strcspn(buffer, "\n")] = '\0'; // Remover o caractere '\n'
 }
 
-// Função para salvar o nome de usuário e senha no arquivo
-void salvarCredenciais(const char *usuario, const char *senha) {
-    unsigned long hashUsuario = gerarHash(usuario);
-    unsigned long hashSenha = gerarHash(senha);
+// Função para exibir relatórios individualizados
+void relatoriosIndividualizados() {
+    char totalInsumos[50], totalGastosMensais[50];
 
-    FILE *file = fopen(CREDENCIAIS_ARQUIVO, "w");
-    if (file == NULL) {
-        printf("Erro: Não foi possível abrir o arquivo para escrita.\n");
-        exit(1);
-    }
+    printf("=== Relatórios Individualizados ===\n");
+    capturarEntrada("Digite o total de insumos tratados semestralmente: ", totalInsumos, sizeof(totalInsumos));
+    capturarEntrada("Digite o total de gastos mensais: ", totalGastosMensais, sizeof(totalGastosMensais));
 
-    fprintf(file, "%lu %lu\n", hashUsuario, hashSenha); // Grava os hashes no arquivo
-    fclose(file);
-}
+    printf("\nRelatório Individualizado:\n");
+    printf("Total de insumos tratados semestralmente: %s\n", totalInsumos);
+    printf("Total de gastos mensais: %s\n", totalGastosMensais);
 
-// Função para carregar os hashes do arquivo
-void carregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha) {
-    FILE *file = fopen(CREDENCIAIS_ARQUIVO, "r");
-    if (file == NULL) {
-        printf("Erro: Não foi possível abrir o arquivo de credenciais.\n");
-        exit(1);
-    }
-
-    if (fscanf(file, "%lu %lu", hashUsuario, hashSenha) != 2) {
-        printf("Erro: O arquivo de credenciais está vazio ou mal formatado.\n");
+    // Salvar relatório em arquivo
+    FILE *file = fopen(RELATORIO_INDIVIDUAL, "w");
+    if (file) {
+        fprintf(file, "Relatório Individualizado:\n");
+        fprintf(file, "Total de insumos tratados semestralmente: %s\n", totalInsumos);
+        fprintf(file, "Total de gastos mensais: %s\n", totalGastosMensais);
         fclose(file);
-        exit(1);
+        printf("\nRelatório salvo em '%s'.\n", RELATORIO_INDIVIDUAL);
+    } else {
+        printf("\nErro ao salvar o relatório individualizado.\n");
     }
-
-    fclose(file);
 }
 
-// Função de login
-void login() {
-    unsigned long hashUsuarioArmazenado, hashSenhaArmazenado;
-    carregarCredenciais(&hashUsuarioArmazenado, &hashSenhaArmazenado);
+// Função para exibir relatórios globais
+void relatoriosGlobais() {
+    char regiaoMaiorVolume[50], industriaMenorProducao[50], aporteFinanceiroSemestral[50];
 
-    char inputUsuario[50], inputSenha[50];
-    unsigned long inputHashUsuario, inputHashSenha;
+    printf("=== Relatórios Globais ===\n");
+    capturarEntrada("Digite a região com maior volume de resíduos industriais tratados: ", regiaoMaiorVolume, sizeof(regiaoMaiorVolume));
+    capturarEntrada("Digite a indústria com menor produção no último semestre: ", industriaMenorProducao, sizeof(industriaMenorProducao));
+    capturarEntrada("Digite o aporte financeiro semestral: ", aporteFinanceiroSemestral, sizeof(aporteFinanceiroSemestral));
 
-    printf("========================\n");
-    printf("||  Sistema de Login  ||\n");
-    printf("========================\n");
+    printf("\nRelatório Global:\n");
+    printf("Região com maior volume de resíduos industriais tratados: %s\n", regiaoMaiorVolume);
+    printf("Indústria com menor produção no último semestre: %s\n", industriaMenorProducao);
+    printf("Aporte financeiro semestral: %s\n", aporteFinanceiroSemestral);
 
+    // Salvar relatório em arquivo
+    FILE *file = fopen(RELATORIO_GLOBAL, "w");
+    if (file) {
+        fprintf(file, "Tipo,Descrição\n");
+        fprintf(file, "Região Maior Volume: %s\n", regiaoMaiorVolume);
+        fprintf(file, "Indústria Menor Produção: %s\n", industriaMenorProducao);
+        fprintf(file, "Aporte Financeiro Semestral: %s\n", aporteFinanceiroSemestral);
+        fclose(file);
+        printf("\nRelatório salvo em '%s'.\n", RELATORIO_GLOBAL);
+    } else {
+        printf("\nErro ao salvar o relatório global.\n");
+    }
+}
+
+// Função para consultar relatórios existentes
+void consultarRelatorios() {
+    char linha[256];
+
+    printf("\n=== Consulta de Relatórios Existentes ===\n");
+
+    // Verifica e exibe o relatório individualizado
+    FILE *file = fopen(RELATORIO_INDIVIDUAL, "r");
+    if (file == NULL) {
+        printf("\n[Relatório Individualizado]\nNenhum relatório individualizado encontrado.\n");
+    } else {
+        printf("\n[Relatório Individualizado]\n");
+        while (fgets(linha, sizeof(linha), file)) {
+            printf("%s", linha);
+        }
+        fclose(file);
+    }
+
+    // Verifica e exibe o relatório global
+    file = fopen(RELATORIO_GLOBAL, "r");
+    if (file == NULL) {
+        printf("\n[Relatório Global]\nNenhum relatório global encontrado.\n");
+    } else {
+        printf("\n[Relatório Global]\n");
+        while (fgets(linha, sizeof(linha), file)) {
+            printf("%s", linha);
+        }
+        fclose(file);
+    }
+
+    printf("\nPressione Enter para continuar...");
+    getchar();
+    system("cls");
+}
+
+// Função para validar login
+int login() {
+    char username[20], password[20];
+
+    printf("=== Login ===\n");
+    capturarEntrada("Usuário: ", username, sizeof(username));
+    capturarEntrada("Senha: ", password, sizeof(password));
+
+    // Verifica credenciais
+    if (strcmp(username, "admin") == 0 && strcmp(password, "admin") == 0) {
+        printf("Login bem-sucedido!\n");
+        return 1;
+    } else {
+        printf("Credenciais inválidas. Tente novamente.\n");
+        return 0;
+    }
+}
+
+int main() {
+    int opcao;
+
+    // Tela de login
+    while (!login()) {
+        printf("Tentativa de login falhou.\n");
+    }
+
+    // Menu principal
     while (1) {
-        printf("Digite o nome de usuário: ");
-        scanf("%s", inputUsuario);
+        printf("\n=== Menu Principal ===\n");
+        printf("1. Consultar Relatórios\n");
+        printf("2. Relatórios Individualizados\n");
+        printf("3. Relatórios Globais\n");
+        printf("4. Sair\n");
+        printf("Escolha uma opção: ");
+        if (scanf("%d", &opcao) != 1) {
+            printf("Entrada inválida. Tente novamente.\n");
+            while (getchar() != '\n'); // Limpa buffer de entrada
+            continue;
+        }
+        getchar(); // Consome o '\n' restante no buffer
 
-        printf("Digite a senha: ");
-        scanf("%s", inputSenha);
-
-        // Calcula os hashes do usuário e senha digitados
-        inputHashUsuario = gerarHash(inputUsuario);
-        inputHashSenha = gerarHash(inputSenha);
-
-        if (inputHashUsuario == hashUsuarioArmazenado && inputHashSenha == hashSenhaArmazenado) {
-#ifdef _WIN32
-            system("cls");
-#else
-            system("clear");
-#endif
-            printf("\nLogin realizado com sucesso!\n\n");
-            break;
-        } else {
-            printf("\nNome de usuário ou senha incorretos. Tente novamente.\n\n");
+        switch (opcao) {
+            case 1:
+                system("cls");
+                consultarRelatorios();
+                break;
+            case 2:
+                system("cls");
+                relatoriosIndividualizados();
+                break;
+            case 3:
+                system("cls");
+                relatoriosGlobais();
+                break;
+            case 4:
+                printf("Saindo do sistema...\n");
+                return 0;
+            default:
+                printf("Opção inválida. Tente novamente.\n");
         }
     }
-}
 
-// Função principal
-int main() {
-    // Verifica se o arquivo de credenciais já existe
-    FILE *file = fopen(CREDENCIAIS_ARQUIVO, "r");
-    if (file == NULL) {
-        // Caso não exista, cria um usuário inicial
-        char usuarioInicial[50], senhaInicial[50];
-        printf("Nenhum usuário encontrado. \nCrie um nome de usuário inicial: ");
-        scanf("%s", usuarioInicial);
-        printf("Crie uma senha inicial: ");
-        scanf("%s", senhaInicial);
-        salvarCredenciais(usuarioInicial, senhaInicial);
-        printf("Usuário e senha criados com sucesso!\n\n");
-    } else {
-        fclose(file);
-    }
-
-    // Inicia o processo de login
-    login();
-
-    // Continuação do programa
-    printf("Bem-vindo ao sistema!\n");
     return 0;
 }
