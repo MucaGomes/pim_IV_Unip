@@ -6,3 +6,11 @@
 	<locale.h>
 	<windows.h>
 
+1732457193 source:e:\estudos\pim\pimivrefatorado\pim_iv_unip\main.c
+	<stdio.h>
+	<string.h>
+	<stdlib.h>
+	<locale.h>
+	<stdbool.h>
+	<windows.h>
+
