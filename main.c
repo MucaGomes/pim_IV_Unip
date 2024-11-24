@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <locale.h>
+#include <stdbool.h>
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -10,9 +11,10 @@
 #define EMPRESAS_ARQUIVO "empresas.txt"
 #define RESIDUOS_ARQUIVO "residuos.txt"
 
-#define MAX_LEN 100
+#define MAX_LEN 256
 
-typedef struct {
+typedef struct
+{
     int id;                      // ID da empresa
     char nomeEmpresa[MAX_LEN];   // Nome da empresa
     int mes;                     // Mês correspondente
@@ -20,11 +22,8 @@ typedef struct {
     float valorEstimado;         // Valor estimado
 } Residuo;
 
-
-#define MAX_LEN 256
-
-// Estrutura para armazenar dados da empresa
-typedef struct {
+typedef struct
+{
     int id;
     char nomeResponsavel[MAX_LEN];
     char telefoneResponsavel[MAX_LEN];
@@ -45,17 +44,70 @@ typedef struct {
     char outrosDados[MAX_LEN];
 } Empresa;
 
+typedef struct
+{
+    Empresa empresaSelecionada;
+    int quantidadeResiduosPrimeiro;
+    int quantidadeResiduosSegundo;
+    int quantidadeResiduosTotal;
+    float valorEstimadoPrimeiro;
+    float valorEstimadoSegundo;
+    float valorEstimadoTotal;
+} RelatorioIndividual;
 
-int obterUltimoIdEmpresa() {
+typedef struct
+{
+    Empresa empresaMaiorProducao;
+    Empresa empresaMenorProducao;
+    float aporteFinanceiroPrimeiro;
+    float aporteFinanceiroSegundo;
+    float aporteFinanceiroTotal;
+} RelatorioGlobal;
+
+void DefinirIdioma()
+{
+    setlocale(LC_ALL, "pt_BR.UTF-8");
+
+#ifdef _WIN32
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+}
+
+unsigned long GerarHash(const char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+
+    while ((c = *str++))
+    {
+        hash = ((hash << 5) + hash) + c;
+    }
+
+    return hash;
+}
+
+void LimparConsole()
+{
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+int ObterUltimoIdEmpresa()
+{
     FILE *arquivo = fopen(EMPRESAS_ARQUIVO, "r");
-    if (arquivo == NULL) {
-        return 0; // Se não houver arquivo, retorna 0 (primeiro ID)
+    if (arquivo == NULL)
+    {
+        return 0;
     }
 
     int ultimoId = 0;
     char linha[MAX_LEN];
 
-    while (fgets(linha, sizeof(linha), arquivo)) {
+    while (fgets(linha, sizeof(linha), arquivo))
+    {
         Empresa e;
         sscanf(linha, "%d|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]",
                &e.id, e.nomeResponsavel, e.telefoneResponsavel, e.emailResponsavel,
@@ -63,7 +115,8 @@ int obterUltimoIdEmpresa() {
                e.rua, e.numero, e.bairro, e.cidade, e.estado, e.cep, e.emailEmpresa,
                e.dataAbertura, e.outrosDados);
 
-        if (e.id > ultimoId) {
+        if (e.id > ultimoId)
+        {
             ultimoId = e.id;
         }
     }
@@ -72,23 +125,24 @@ int obterUltimoIdEmpresa() {
     return ultimoId;
 }
 
-
-void cadastrarEmpresa() {
+void CadastrarEmpresa()
+{
     FILE *arquivo = fopen(EMPRESAS_ARQUIVO, "a");
-    if (arquivo == NULL) {
+    if (arquivo == NULL)
+    {
         printf("Erro ao abrir o arquivo.\n");
         return;
     }
 
     Empresa e;
-    int ultimoId = obterUltimoIdEmpresa();
-    e.id = ultimoId + 1; // Incrementa o último ID registrado
+    int ultimoId = ObterUltimoIdEmpresa();
+    e.id = ultimoId + 1;
 
     printf("Digite os dados da empresa:\n");
 
     // Coletar dados
     printf("Nome do responsável: ");
-    getchar(); // Limpar o buffer do teclado
+    getchar();
     fgets(e.nomeResponsavel, MAX_LEN, stdin);
     e.nomeResponsavel[strcspn(e.nomeResponsavel, "\n")] = 0;
 
@@ -156,7 +210,6 @@ void cadastrarEmpresa() {
     fgets(e.outrosDados, MAX_LEN, stdin);
     e.outrosDados[strcspn(e.outrosDados, "\n")] = 0;
 
-   // Salvar dados no arquivo
     fprintf(arquivo, "%d|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s|%s\n",
             e.id, e.nomeResponsavel, e.telefoneResponsavel, e.emailResponsavel,
             e.nomeEmpresa, e.cnpj, e.razaoSocial, e.nomeFantasia, e.telefoneEmpresa,
@@ -167,100 +220,118 @@ void cadastrarEmpresa() {
     printf("Cadastro realizado com sucesso!\n");
 }
 
-
-// Fun��o para buscar empresa por ID
-void buscarEmpresaPorID() {
-    FILE *arquivo = fopen("empresas.txt", "r"); // Abre o arquivo para leitura
-    if (arquivo == NULL) {
-        printf("Nenhum registro encontrado. O arquivo n�o existe.\n");
-        return;
+Empresa* CarregarEmpresas(int *tamanho)
+{
+    FILE *arquivo = fopen(EMPRESAS_ARQUIVO, "r");
+    if (arquivo == NULL)
+    {
+        printf("Erro ao abrir o arquivo de empresas.\n");
+        return NULL;
     }
 
-    int idBusca;
-    printf("Digite o ID da empresa que deseja buscar (somente numeros) : ");
-    scanf("%d", &idBusca);
+    Empresa* lista = NULL;
+    char linha[MAX_LEN];
+    int count = 0;
 
-    char linha[1024];
-    int encontrado = 0;
+    while (fgets(linha, sizeof(linha), arquivo))
+    {
+        Empresa novaEmpresa;
 
-    while (fgets(linha, sizeof(linha), arquivo)) {
-        Empresa e;
+        int colunas;
 
-        // Divide os campos da linha usando "/" como delimitador
-        sscanf(linha, "%d/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^/]/%[^\n]",
-               &e.id, e.nomeResponsavel, e.telefoneResponsavel, e.emailResponsavel,
-               e.nomeEmpresa, e.cnpj, e.razaoSocial, e.nomeFantasia,
-               e.telefoneEmpresa, e.rua, e.numero, e.bairro, e.cidade,
-               e.estado, e.cep, e.emailEmpresa, e.dataAbertura, e.outrosDados);
+        if(sscanf(linha, "%d|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]",
+                  &novaEmpresa.id, novaEmpresa.nomeResponsavel, novaEmpresa.telefoneResponsavel,
+                  novaEmpresa.emailResponsavel, novaEmpresa.nomeEmpresa, novaEmpresa.cnpj,
+                  novaEmpresa.razaoSocial, novaEmpresa.nomeFantasia, novaEmpresa.telefoneEmpresa,
+                  novaEmpresa.rua, novaEmpresa.numero, novaEmpresa.bairro, novaEmpresa.cidade,
+                  novaEmpresa.estado, novaEmpresa.cep, novaEmpresa.emailEmpresa,
+                  novaEmpresa.dataAbertura, novaEmpresa.outrosDados) == 18)
+        {
 
-        if (e.id == idBusca) {
-            printf("\n========== Empresa Encontrada ==========\n");
-            printf("ID: %d\n", e.id);
-            printf("Respons�vel:\n");
-            printf("  Nome: %s\n", e.nomeResponsavel);
-            printf("  Telefone: %s\n", e.telefoneResponsavel);
-            printf("  E-mail: %s\n", e.emailResponsavel);
-            printf("\nDados da Empresa:\n");
-            printf("  Nome: %s\n", e.nomeEmpresa);
-            printf("  CNPJ: %s\n", e.cnpj);
-            printf("  Raz�o Social: %s\n", e.razaoSocial);
-            printf("  Nome Fantasia: %s\n", e.nomeFantasia);
-            printf("  Telefone: %s\n", e.telefoneEmpresa);
-            printf("\nEndere�o:\n");
-            printf("  Rua: %s, N�mero: %s\n", e.rua, e.numero);
-            printf("  Bairro: %s, Cidade: %s, Estado: %s, CEP: %s\n", e.bairro, e.cidade, e.estado, e.cep);
-            printf("\nOutros Dados:\n");
-            printf("  E-mail: %s\n", e.emailEmpresa);
-            printf("  Data de Abertura: %s\n", e.dataAbertura);
-            printf("  Informa��es Adicionais: %s\n", e.outrosDados);
-            printf("========================================\n");
-            encontrado = 1;
-            break;
+            Empresa* novaLista = realloc(lista, (count + 1) * sizeof(Empresa));
+
+            if (!novaLista)
+            {
+                printf("Erro ao alocar memória para as empresas.\n");
+                free(lista);
+                fclose(arquivo);
+                return NULL;
+            }
+
+            lista = novaLista;
+            lista[count++] = novaEmpresa;
         }
     }
 
-    if (!encontrado) {
+    fclose(arquivo);
+    *tamanho = count;
+    return lista;
+}
+
+Empresa* LocalizarEmpresa(Empresa* lista, int tamanhoLista, int idEmpresaSelecionada)
+{
+
+    for (int i = 0; i < tamanhoLista; i++)
+    {
+        if (lista[i].id == idEmpresaSelecionada)
+        {
+            return &lista[i];
+        }
+    }
+
+    return NULL;
+}
+
+void BuscarEmpresaPorID()
+{
+    int idBusca;
+    int encontrado = 0;
+    int tamanhoLista;
+
+    Empresa* empresas = CarregarEmpresas(&tamanhoLista);
+
+    printf("Digite o ID da empresa que deseja buscar (somente numeros) : ");
+    scanf("%d", &idBusca);
+
+    Empresa* empresaLocalizada = LocalizarEmpresa(empresas, tamanhoLista, idBusca);
+
+    if(empresaLocalizada == NULL)
+    {
         printf("Nenhuma empresa encontrada com o ID informado.\n");
     }
-
-    fclose(arquivo);
-}
-
-
-void DefinirIdioma()
-{
-    setlocale(LC_ALL, "pt_BR.UTF-8");
-
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-#endif
-}
-
-
-// Função de hash simples baseada no algoritmo DJBX33A
-unsigned long GerarHash(const char *str)
-{
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *str++))
+    else
     {
-        hash = ((hash << 5) + hash) + c;
+        printf("\n========== Empresa Encontrada ==========\n");
+        printf("ID: %d\n", empresaLocalizada->id);
+        printf("Responsável:\n");
+        printf("  Nome: %s\n", empresaLocalizada->nomeResponsavel);
+        printf("  Telefone: %s\n", empresaLocalizada->telefoneResponsavel);
+        printf("  E-mail: %s\n", empresaLocalizada->emailResponsavel);
+        printf("\nDados da Empresa:\n");
+        printf("  Nome: %s\n", empresaLocalizada->nomeEmpresa);
+        printf("  CNPJ: %s\n", empresaLocalizada->cnpj);
+        printf("  Razão Social: %s\n", empresaLocalizada->razaoSocial);
+        printf("  Nome Fantasia: %s\n", empresaLocalizada->nomeFantasia);
+        printf("  Telefone: %s\n", empresaLocalizada->telefoneEmpresa);
+        printf("\nEndereço:\n");
+        printf("  Rua: %s, Número: %s\n", empresaLocalizada->rua, empresaLocalizada->numero);
+        printf("  Bairro: %s, Cidade: %s, Estado: %s, CEP: %s\n", empresaLocalizada->bairro, empresaLocalizada->cidade, empresaLocalizada->estado, empresaLocalizada->cep);
+        printf("\nOutros Dados:\n");
+        printf("  E-mail: %s\n", empresaLocalizada->emailEmpresa);
+        printf("  Data de Abertura: %s\n", empresaLocalizada->dataAbertura);
+        printf("  Informações Adicionais: %s\n", empresaLocalizada->outrosDados);
+        printf("========================================\n");
     }
-
-    return hash;
 }
 
-
-void LimparConsole()
+void ExibirListaEmpresas(Empresa* lista, int tamanhoLista)
 {
-#ifdef _WIN32
-    system("cls");
-#else
-    system("clear");
-#endif
+    printf("Empresas disponíveis:\n");
+    for (int i = 0; i < tamanhoLista; i++)
+    {
+        printf("ID: %d - Nome: %s\n", lista[i].id, lista[i].nomeEmpresa);
+    }
 }
-
 
 void SalvarCredenciais(const char *usuario, const char *senha)
 {
@@ -278,7 +349,6 @@ void SalvarCredenciais(const char *usuario, const char *senha)
     fclose(file);
 }
 
-
 void CriarNovoUsuario()
 {
     char usuarioInicial[50], senhaInicial[50];
@@ -295,7 +365,6 @@ void CriarNovoUsuario()
 
     printf("Usuário e senha criados com sucesso!\n\n");
 }
-
 
 void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
 {
@@ -315,7 +384,6 @@ void CarregarCredenciais(unsigned long *hashUsuario, unsigned long *hashSenha)
 
     fclose(file);
 }
-
 
 void Login()
 {
@@ -358,147 +426,94 @@ void Login()
     }
 }
 
-
-// Função para carregar as empresas do arquivo
-Empresa* carregarEmpresas(int *tamanho) {
-    FILE *arquivo = fopen("empresas.txt", "r");
-    if (arquivo == NULL) {
-        printf("Erro ao abrir o arquivo de empresas.\n");
-        return NULL;
-    }
-
-    Empresa* lista = NULL;
-    char linha[MAX_LEN];
-    int count = 0;
-
-    while (fgets(linha, sizeof(linha), arquivo)) {
-        Empresa novaEmpresa;
-
-        // Certifique-se de que o formato da linha está correto
-        if (sscanf(linha, "%d|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]|%99[^|]",
-                   &novaEmpresa.id, novaEmpresa.nomeResponsavel, novaEmpresa.telefoneResponsavel,
-                   novaEmpresa.emailResponsavel, novaEmpresa.nomeEmpresa, novaEmpresa.cnpj,
-                   novaEmpresa.razaoSocial, novaEmpresa.nomeFantasia, novaEmpresa.telefoneEmpresa,
-                   novaEmpresa.rua, novaEmpresa.numero, novaEmpresa.bairro, novaEmpresa.cidade,
-                   novaEmpresa.estado, novaEmpresa.cep, novaEmpresa.emailEmpresa,
-                   novaEmpresa.dataAbertura, novaEmpresa.outrosDados) == 17) {
-
-            Empresa* novaLista = realloc(lista, (count + 1) * sizeof(Empresa));
-            if (!novaLista) {
-                printf("Erro ao alocar memória para as empresas.\n");
-                free(lista);
-                fclose(arquivo);
-                return NULL;
-            }
-
-            lista = novaLista;
-            lista[count++] = novaEmpresa;
-        } else {
-            printf("Formato inválido na linha: %s\n", linha);  // Imprime a linha que está com formato errado
-        }
-    }
-
-    fclose(arquivo);
-    *tamanho = count;
-    return lista;
-}
-
-
-// Função para exibir as empresas carregadas
-void exibirEmpresas() {
-    int tamanho;
-    Empresa* empresas = carregarEmpresas(&tamanho);
-    if (empresas != NULL) {
-        printf("Empresas disponíveis:\n");
-        for (int i = 0; i < tamanho; i++) {
-            printf("ID: %d | Nome: %s\n", empresas[i].id, empresas[i].nomeEmpresa);
-        }
-        free(empresas);
-    }
-}
-
-
-void CadastrarResiduo() {
+void CadastrarResiduo()
+{
     Residuo novoResiduo;
 
-    // Passo 1: Carregar as empresas do arquivo
-    int tamanhoEmpresas;
-    Empresa* empresas = carregarEmpresas(&tamanhoEmpresas);
+    int tamanhoLista;
 
-    if (empresas == NULL) {
+    Empresa* empresas = CarregarEmpresas(&tamanhoLista);
+
+    if (empresas == NULL)
+    {
         printf("Erro ao carregar empresas.\n");
         return;
     }
 
-    // Passo 2: Exibir as empresas para o usuário
-    printf("Empresas disponíveis:\n");
-    for (int i = 0; i < tamanhoEmpresas; i++) {
-        printf("ID: %d | Nome: %s\n", empresas[i].id, empresas[i].nomeEmpresa);
-    }
+    ExibirListaEmpresas(empresas, tamanhoLista);
 
-    // Passo 3: Solicitar que o usuário escolha uma empresa
-    printf("Digite o ID da empresa selecionada: ");
-    scanf("%d", &novoResiduo.id);  // A empresa associada ao resíduo
+    Empresa* empresaLocalizada = NULL;
 
-    // Verificar se o ID selecionado é válido
-    int empresaSelecionadaValida = 0;
-    for (int i = 0; i < tamanhoEmpresas; i++) {
-        if (empresas[i].id == novoResiduo.id) {
-            empresaSelecionadaValida = 1;
-            break;
+    while(empresaLocalizada == NULL)
+    {
+        printf("Digite o ID da empresa selecionada: ");
+        scanf("%d", &novoResiduo.id);
+
+        empresaLocalizada = LocalizarEmpresa(empresas, tamanhoLista, novoResiduo.id);
+
+        if(empresaLocalizada == NULL)
+        {
+            printf("Nenhuma empresa encontrada com o ID informado.\n");
+        }
+        else
+        {
+
+            strcpy(novoResiduo.nomeEmpresa, empresaLocalizada->nomeEmpresa);
+
+            printf("Digite o número do mês correspondente: ");
+            scanf("%d", &novoResiduo.mes);
+
+            if(novoResiduo.mes < 1 || novoResiduo.mes > 12)
+            {
+                printf("Mês inválido!\n");
+                return;
+            }
+
+            printf("Digite a quantidade de resíduos tratados: ");
+            scanf("%d", &novoResiduo.quantidadeResiduos);
+
+            if(novoResiduo.quantidadeResiduos < 0)
+            {
+                printf("Quantidade de resíduos inválida!\n");
+                return;
+            }
+
+            printf("Digite o valor estimado de custo: ");
+            scanf("%f", &novoResiduo.valorEstimado);
+
+            if(novoResiduo.valorEstimado < 0.01)
+            {
+                printf("Valor estimado de custo inválido!\n");
+                return;
+            }
+
+            FILE *file = fopen(RESIDUOS_ARQUIVO, "a");
+
+            if (file == NULL)
+            {
+                printf("Erro: Não foi possível abrir o arquivo para resíduos.\n");
+            }
+            else
+            {
+                fprintf(file, "%d|%s|%d|%d|%f\n", novoResiduo.id, novoResiduo.nomeEmpresa, novoResiduo.mes, novoResiduo.quantidadeResiduos, novoResiduo.valorEstimado);
+                printf("Cadastro realizado com sucesso.\n\n");
+            }
+
+            fclose(file);
+
         }
     }
-    if (!empresaSelecionadaValida) {
-        printf("ID de empresa inválido!\n");
-        return;
-    }
 
-    // Passo 4: Solicitar os dados do resíduo
-    printf("Digite o número do mês correspondente: ");
-    scanf("%d", &novoResiduo.mes);
-
-    if(novoResiduo.mes < 1 || novoResiduo.mes > 12) {
-        printf("Mês inválido!\n");
-        return;
-    }
-
-    printf("Digite a quantidade de resíduos tratados: ");
-    scanf("%d", &novoResiduo.quantidadeResiduos);
-
-    if(novoResiduo.quantidadeResiduos < 0) {
-        printf("Quantidade de resíduos inválida!\n");
-        return;
-    }
-
-    printf("Digite o valor estimado de custo: ");
-    scanf("%f", &novoResiduo.valorEstimado);
-
-    if(novoResiduo.valorEstimado < 0.01) {
-        printf("Valor estimado de custo inválido!\n");
-        return;
-    }
-
-    // Passo 5: Salvar o resíduo no arquivo
-    FILE *file = fopen("residuos.txt", "a");
-
-    if (file == NULL) {
-        printf("Erro: Não foi possível abrir o arquivo para resíduos.\n");
-    } else {
-        fprintf(file, "%d|%d|%d|%f\n", novoResiduo.id, novoResiduo.mes, novoResiduo.quantidadeResiduos, novoResiduo.valorEstimado);
-        printf("Cadastro realizado com sucesso.\n\n");
-    }
-
-    fclose(file);
-
-    // Liberar a memória da lista de empresas carregada
     free(empresas);
+
 }
 
-
-Residuo* CarregarResiduos(int* tamanho) {
+Residuo* CarregarResiduos(int* tamanho)
+{
     FILE* file = fopen(RESIDUOS_ARQUIVO, "r");
 
-    if (!file) {
+    if (!file)
+    {
         printf("Arquivo de resíduos não encontrado. Certifique-se de que o arquivo '%s' existe.\n", RESIDUOS_ARQUIVO);
         *tamanho = 0;
         return NULL;
@@ -508,14 +523,16 @@ Residuo* CarregarResiduos(int* tamanho) {
     char linha[256];
     int count = 0;
 
-    while (fgets(linha, sizeof(linha), file)) {
+    while (fgets(linha, sizeof(linha), file))
+    {
         Residuo novoResiduo;
 
-        if (sscanf(linha, "%d|%d|%d|%f", &novoResiduo.id, &novoResiduo.mes,
-                   &novoResiduo.quantidadeResiduos, &novoResiduo.valorEstimado) == 4) {
+        if (sscanf(linha, "%d|%99[^|]|%d|%d|%f", &novoResiduo.id, novoResiduo.nomeEmpresa, &novoResiduo.mes, &novoResiduo.quantidadeResiduos, &novoResiduo.valorEstimado) == 5)
+        {
             Residuo* novaLista = realloc(lista, (count + 1) * sizeof(Residuo));
 
-            if (!novaLista) {
+            if (!novaLista)
+            {
                 printf("Erro ao alocar memória!\n");
                 free(lista);
                 fclose(file);
@@ -532,7 +549,6 @@ Residuo* CarregarResiduos(int* tamanho) {
     return lista;
 }
 
-
 void GerenciarResiduos()
 {
     int opcao;
@@ -542,7 +558,7 @@ void GerenciarResiduos()
 
     while (opcao != 3)
     {
-        printf("Gerenciar Resíduos: \n\n");
+        printf("Gerenciar Resíduos\n\n");
         printf("Menu Principal: \n\n");
         printf("1 - Cadastro \n");
         printf("2 - Listar \n");
@@ -557,13 +573,20 @@ void GerenciarResiduos()
             break;
 
         case 2:
+
+            LimparConsole();
+
+            printf("Resíduos cadastrados\n\n");
+
             lista = CarregarResiduos(&tamanho);
 
             for (i = 0; i < tamanho; i++)
             {
-                printf("ID Empresa: %d | Nome: %s | Mês: %d | Qtd. Resíduos: %d | Valor Estimado: %.2f\n",
+                printf("ID Empresa: %d; Nome: %s; Mês: %d; Qtd. Resíduos: %d; Valor Estimado: %.2f \n",
                        lista[i].id, lista[i].nomeEmpresa, lista[i].mes, lista[i].quantidadeResiduos, lista[i].valorEstimado);
             }
+
+            printf("\n");
 
             free(lista);
             break;
@@ -578,79 +601,273 @@ void GerenciarResiduos()
     }
 }
 
+RelatorioIndividual GerarRelatorioIndividual(Empresa empresaSelecionada)
+{
+    RelatorioIndividual relatorio;
 
-void CriarRelatorios() {
-     // Passo 1: Carregar as empresas do arquivo
-    int tamanhoEmpresas;
-    Empresa* empresas = carregarEmpresas(&tamanhoEmpresas);
+    relatorio.empresaSelecionada = empresaSelecionada;
+    relatorio.quantidadeResiduosPrimeiro = 0;
+    relatorio.quantidadeResiduosSegundo = 0;
+    relatorio.quantidadeResiduosTotal = 0;
+    relatorio.valorEstimadoPrimeiro = 0;
+    relatorio.valorEstimadoSegundo = 0;
+    relatorio.valorEstimadoTotal = 0;
+    int tamanho;
 
-    if (empresas == NULL) {
+    Residuo* lista = CarregarResiduos(&tamanho);
+
+    for (int i = 0; i < tamanho; i++)
+    {
+        if (lista[i].id == relatorio.empresaSelecionada.id)
+        {
+
+            if (lista[i].mes >= 1 && lista[i].mes <= 6)
+            {
+                relatorio.quantidadeResiduosPrimeiro += lista[i].quantidadeResiduos;
+                relatorio.valorEstimadoPrimeiro += lista[i].valorEstimado;
+            }
+            else
+            {
+                relatorio.quantidadeResiduosSegundo += lista[i].quantidadeResiduos;
+                relatorio.valorEstimadoSegundo += lista[i].valorEstimado;
+            }
+
+            relatorio.quantidadeResiduosTotal += lista[i].quantidadeResiduos;
+            relatorio.valorEstimadoTotal += lista[i].valorEstimado;
+
+        }
+    }
+
+    return relatorio;
+}
+
+void ImprimirRelatorioIndividual(RelatorioIndividual relatorio)
+{
+    printf("\n======== Relatório da Empresa: %s ========\n", relatorio.empresaSelecionada.nomeEmpresa);
+    printf("Total de resíduos tratados no primeiro semestre: %d unidades\n", relatorio.quantidadeResiduosPrimeiro);
+    printf("Total de resíduos tratados no segundo semestre %d unidades\n", relatorio.quantidadeResiduosSegundo);
+    printf("Total de gastos mensais estimados: R$ %.2f \n", relatorio.valorEstimadoTotal);
+}
+
+void SalvarRelatorioIndividual(RelatorioIndividual relatorio)
+{
+    char opcao;
+    char caminho[256];
+
+    printf("\nDeseja salvar o relatório em um arquivo? (s/n): ");
+    scanf(" %c", &opcao);
+
+    if (opcao == 's' || opcao == 'S')
+    {
+        printf("Informe o caminho para salvar o relatório (ex: C:\\relatorios\\relatorio.txt): ");
+        scanf(" %255s", caminho);
+
+        FILE *arquivo = fopen(caminho, "w");
+
+        if (arquivo == NULL)
+        {
+            perror("Erro ao criar o arquivo");
+            return;
+        }
+
+        fprintf(arquivo,"======== Relatório da Empresa: %s ========\n", relatorio.empresaSelecionada.nomeEmpresa);
+        fprintf(arquivo,"Total de resíduos tratados no primeiro semestre: %d unidades\n", relatorio.quantidadeResiduosPrimeiro);
+        fprintf(arquivo,"Total de resíduos tratados no segundo semestre %d unidades\n", relatorio.quantidadeResiduosSegundo);
+        fprintf(arquivo,"Total de gastos mensais estimados: R$ %.2f \n", relatorio.valorEstimadoTotal);
+
+        fclose(arquivo);
+
+        printf("Relatório salvo em: %s\n", caminho);
+    }
+    else
+    {
+        printf("Relatório não será salvo.\n");
+    }
+}
+
+RelatorioGlobal GerarRelatorioGlobal()
+{
+
+    int tamanhoLista;
+    int quantidadeMaiorProducao = NULL;
+    int quantidadeMenorProducao = NULL;
+    Empresa* empresas;
+
+    RelatorioGlobal relatorio;
+
+    relatorio.aporteFinanceiroPrimeiro = 0;
+    relatorio.aporteFinanceiroSegundo = 0;
+    relatorio.aporteFinanceiroTotal = 0;
+
+    empresas = CarregarEmpresas(&tamanhoLista);
+
+    if (empresas == NULL)
+    {
         printf("Erro ao carregar empresas.\n");
         return;
     }
 
-    // Passo 2: Exibir as empresas para o usuário
-    printf("Empresas disponíveis:\n");
-    for (int i = 0; i < tamanhoEmpresas; i++) {
-        printf("ID: %d | Nome: %s\n", empresas[i].id, empresas[i].nomeEmpresa);
+    for(int i =0; i < tamanhoLista; i++)
+    {
+        RelatorioIndividual relatorioEmpresa = GerarRelatorioIndividual(empresas[i]);
+
+        if(quantidadeMaiorProducao == NULL || relatorioEmpresa.quantidadeResiduosTotal > quantidadeMaiorProducao)
+        {
+            relatorio.empresaMaiorProducao = relatorioEmpresa.empresaSelecionada;
+            quantidadeMaiorProducao = relatorioEmpresa.quantidadeResiduosTotal;
+        }
+
+        if(quantidadeMenorProducao == NULL || relatorioEmpresa.quantidadeResiduosSegundo < quantidadeMenorProducao)
+        {
+            relatorio.empresaMenorProducao = relatorioEmpresa.empresaSelecionada;
+            quantidadeMenorProducao = relatorioEmpresa.quantidadeResiduosSegundo;
+        }
+
+        relatorio.aporteFinanceiroPrimeiro += relatorioEmpresa.valorEstimadoPrimeiro;
+        relatorio.aporteFinanceiroSegundo += relatorioEmpresa.valorEstimadoSegundo;
+        relatorio.aporteFinanceiroTotal += relatorioEmpresa.valorEstimadoTotal;
     }
 
-    // Passo 3: Solicitar que o usuário escolha uma empresa
-    int empresaEscolhida;
-    printf("Digite o ID da empresa para gerar o relatório: ");
-    scanf("%d", &empresaEscolhida);
+    return relatorio;
 
-    // Verificar se o ID da empresa é válido
-    int empresaValida = 0;
-    for (int i = 0; i < tamanhoEmpresas; i++) {
-        if (empresas[i].id == empresaEscolhida) {
-            empresaValida = 1;
+}
+
+void ImprimirRelatorioGlobal(RelatorioGlobal relatorio)
+{
+    printf("\n======== Relatório Global ========\n");
+    printf("Empresa com a maior produção de resíduos tratados: %s unidades\n", relatorio.empresaMaiorProducao.nomeEmpresa);
+    printf("Empresa com a menor produção de resíduos tratados %s unidades\n", relatorio.empresaMenorProducao.nomeEmpresa);
+    printf("Aporte Financeiro\n");
+    printf("\tPrimeiro semestre: R$ %.2f \n", relatorio.aporteFinanceiroPrimeiro);
+    printf("\tSegundo semestre: R$ %.2f \n", relatorio.aporteFinanceiroSegundo);
+    printf("\tTotal: R$ %.2f \n", relatorio.aporteFinanceiroTotal);
+}
+
+void SalvarRelatorioGlobal(RelatorioGlobal relatorio)
+{
+    char opcao;
+    char caminho[256];
+
+    printf("Deseja salvar o relatório em um arquivo? (s/n): ");
+    scanf(" %c", &opcao);
+
+    if (opcao == 's' || opcao == 'S')
+    {
+        printf("Informe o caminho para salvar o relatório (ex: C:\\relatorios\\relatorio.txt): ");
+        scanf(" %255s", caminho);
+
+        FILE *arquivo = fopen(caminho, "w");
+
+        if (arquivo == NULL)
+        {
+            perror("Erro ao criar o arquivo");
+            return;
+        }
+
+        fprintf(arquivo,"======== Relatório Global ========\n");
+        fprintf(arquivo,"Empresa com a maior produção de resíduos tratados: %s unidades\n", relatorio.empresaMaiorProducao.nomeEmpresa);
+        fprintf(arquivo,"Empresa com a menor produção de resíduos tratados %s unidades\n", relatorio.empresaMenorProducao.nomeEmpresa);
+        fprintf(arquivo,"Aporte Financeiro\n");
+        fprintf(arquivo,"\tPrimeiro semestre: R$ %.2f \n", relatorio.aporteFinanceiroPrimeiro);
+        fprintf(arquivo,"\tSegundo semestre: R$ %.2f \n", relatorio.aporteFinanceiroSegundo);
+        fprintf(arquivo,"\tTotal: R$ %.2f \n", relatorio.aporteFinanceiroTotal);
+
+        fclose(arquivo);
+
+        printf("Relatório salvo em: %s\n", caminho);
+    }
+    else
+    {
+        printf("Relatório não será salvo.\n");
+    }
+}
+
+void GerarRelatorios()
+{
+    int opcao;
+    char opcaoSalvamento;
+    char caminho[256];
+    int tamanhoLista;
+    Empresa* empresas;
+    RelatorioIndividual relatorioInvidual;
+    RelatorioGlobal relatorioGlobal;
+
+    while (opcao != 3)
+    {
+        printf("\nRelatórios: \n\n");
+        printf("1 - Relatórios Individuais\n");
+        printf("2 - Relatórios Globais\n");
+        printf("3 - Voltar\n");
+
+        scanf("%d", &opcao);
+
+        LimparConsole();
+
+        switch (opcao)
+        {
+
+        case 1:
+
+            empresas = CarregarEmpresas(&tamanhoLista);
+
+            if (empresas == NULL)
+            {
+                printf("Erro ao carregar empresas.\n");
+                return;
+            }
+
+            ExibirListaEmpresas(empresas, tamanhoLista);
+
+            Empresa* empresaLocalizada = NULL;
+
+            while(empresaLocalizada == NULL)
+            {
+                int empresaEscolhida;
+                printf("Digite o ID da empresa para gerar o relatório: ");
+                scanf("%d", &empresaEscolhida);
+
+                empresaLocalizada = LocalizarEmpresa(empresas, tamanhoLista, empresaEscolhida);
+
+                if(empresaLocalizada == NULL)
+                {
+                    printf("Nenhuma empresa encontrada com o ID informado.\n");
+                }
+                else
+                {
+                    relatorioInvidual = GerarRelatorioIndividual(*empresaLocalizada);
+
+                    ImprimirRelatorioIndividual(relatorioInvidual);
+
+                    SalvarRelatorioIndividual(relatorioInvidual);
+
+                }
+            }
+
+            free(empresas);
+
+            break;
+
+        case 2:
+
+            relatorioGlobal = GerarRelatorioGlobal();
+
+            ImprimirRelatorioGlobal(relatorioGlobal);
+
+            SalvarRelatorioGlobal(relatorioGlobal);
+
+            break;
+
+        default:
+
+            if (opcao != 3)
+            {
+                printf("Opção inválida!\n");
+            }
+
             break;
         }
     }
-
-    if (!empresaValida) {
-        printf("ID de empresa inválido!\n");
-        free(empresas);
-        return;
-    }
-
-    // Passo 4: Carregar os resíduos tratados para a empresa escolhida
-    FILE *residuosArquivo = fopen(RESIDUOS_ARQUIVO, "r");
-    if (residuosArquivo == NULL) {
-        printf("Erro ao abrir o arquivo de resíduos.\n");
-        free(empresas);
-        return;
-    }
-
-    int totalResiduosSemestral = 0;
-    float totalGastosMensais = 0.0f;
-    char linha[MAX_LEN];
-    while (fgets(linha, sizeof(linha), residuosArquivo)) {
-        Residuo res;
-        if (sscanf(linha, "%d|%d|%d|%f", &res.id, &res.mes, &res.quantidadeResiduos, &res.valorEstimado) == 4) {
-            if (res.id == empresaEscolhida) {
-                // Calcular total de resíduos tratados semestralmente
-                if (res.mes >= 1 && res.mes <= 6) {
-                    totalResiduosSemestral += res.quantidadeResiduos;
-                }
-
-                // Calcular total de gastos mensais
-                totalGastosMensais += res.valorEstimado;
-            }
-        }
-    }
-    fclose(residuosArquivo);
-
-    // Passo 5: Gerar o relatório
-    printf("\n======== Relatório da Empresa: %s ========\n", empresas[empresaEscolhida - 1].nomeEmpresa);
-    printf("Total de resíduos tratados semestralmente: %d unidades\n", totalResiduosSemestral);
-    printf("Total de gastos mensais estimados: R$ %.2f\n", totalGastosMensais);
-
-    // Liberar a memória da lista de empresas carregada
-    free(empresas);
 }
-
 
 void ExibirMenuPrincipal()
 {
@@ -674,13 +891,13 @@ void ExibirMenuPrincipal()
 
         case 1:
 
-            cadastrarEmpresa();
+            CadastrarEmpresa();
 
             break;
 
         case 2:
 
-            buscarEmpresaPorID();
+            BuscarEmpresaPorID();
 
             break;
 
@@ -692,7 +909,7 @@ void ExibirMenuPrincipal()
 
         case 4:
 
-            CriarRelatorios();
+            GerarRelatorios();
 
             break;
 
@@ -708,8 +925,6 @@ void ExibirMenuPrincipal()
     }
 }
 
-
-// Função principal
 int main()
 {
     DefinirIdioma();
@@ -740,3 +955,4 @@ int main()
 
     return 0;
 }
+

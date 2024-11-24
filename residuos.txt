@@ -1,3 +1,24 @@
-2|1|5000|2000.000000
-1|1|1000|1000.000000
-1|2|1000|1000.000000
+1|Marcelo Teste Matriz|1|150|1000.50
+1|Marcelo Teste Matriz|2|120|850.75
+1|Marcelo Teste Matriz|3|200|1200.00
+1|Marcelo Teste Matriz|4|180|1100.30
+1|Marcelo Teste Matriz|5|170|1150.90
+1|Marcelo Teste Matriz|6|140|920.45
+1|Marcelo Teste Matriz|7|160|1020.80
+1|Marcelo Teste Matriz|8|190|1250.20
+1|Marcelo Teste Matriz|9|210|1320.55
+1|Marcelo Teste Matriz|10|180|1180.60
+1|Marcelo Teste Matriz|11|200|1255.75
+1|Marcelo Teste Matriz|12|220|1400.85
+2|Marcelo Teste Filial|1|100|700.25
+2|Marcelo Teste Filial|2|90|650.80
+2|Marcelo Teste Filial|3|120|800.10
+2|Marcelo Teste Filial|4|110|770.40
+2|Marcelo Teste Filial|5|105|750.50
+2|Marcelo Teste Filial|6|95|715.30
+2|Marcelo Teste Filial|7|115|800.90
+2|Marcelo Teste Filial|8|130|890.70
+2|Marcelo Teste Filial|9|140|950.20
+2|Marcelo Teste Filial|10|125|820.60
+2|Marcelo Teste Filial|11|135|870.40
+2|Marcelo Teste Filial|12|140|923.40
